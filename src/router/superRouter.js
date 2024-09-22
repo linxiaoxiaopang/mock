@@ -28,6 +28,22 @@ const superRouter = [
         children: []
       },
     ]
-  }
+  },
+  {
+    path: '/mock',
+    name: '/mock',
+    component: 'Layout',
+    redirect: '/mock/yApi',
+    meta: { title: '物流部', icon: 'prototype' },
+    children: [
+      {
+        name: 'yApi',
+        path: 'yApi',
+        component: 'mock/yApi',
+        meta: { title: 'yApi', icon: 'prototype' },
+        children: []
+      }
+    ]
+  },
 ]
 export default superRouter
