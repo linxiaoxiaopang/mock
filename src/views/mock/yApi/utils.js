@@ -1,86 +1,280 @@
-import {merge} from 'lodash'
+import { merge, isArray, toLower } from 'lodash'
+import { dicOfString } from '@/views/mock/yApi/const'
+import { validatenull } from '@/components/avue/utils/validate';
+import { flatMapDeepByArray } from '@/utils';
+
+const DEFAULT_ARRAY_COUNT = '1-10'
 
 export function createFormByDeepMapData(data, prop) {
-    let tmp = null
-    if (data.type === 'object') {
-        tmp = {}
-        const keys = Object.keys(data.properties)
-        for (let key of keys) {
-            const val = data.properties[key]
-            tmp[key] = createFormByDeepMapData(val, key)
-        }
-        defineDatabaseType(tmp, 'object')
-    } else if (data.type === 'array') {
-        const res = createFormByDeepMapData(data.items, prop)
-        defineDatabaseType(res, 'array')
-        tmp = res
-    } else {
-        tmp = formatVal(data, prop)
+  let tmp = null
+  if (data.type === 'object') {
+    tmp = {}
+    const keys = Object.keys(data.properties)
+    for (let key of keys) {
+      const val = data.properties[key]
+      tmp[key] = createFormByDeepMapData(val, key)
     }
-    return tmp
+    defineDatabaseType(tmp, 'object')
+  } else if (data.type === 'array') {
+    const res = createFormByDeepMapData(data.items, prop)
+    defineDatabaseType(res, 'array')
+    defineDatabaseType(res, DEFAULT_ARRAY_COUNT, 'arrayCount')
+    tmp = res
+  } else {
+    tmp = formatVal(data, prop)
+  }
+  return tmp
 }
 
 const list = {
-    integer(row, key) {
-        const tmpObj = list.default(row, key)
-        tmpObj.mValue = '@integer(1, 100)'
-        const {description = ''} = row
-        if (description.indexOf('主键') >= 0) {
-            tmpObj.mKey = `${key}|+1`
-            tmpObj.mValue = '@integer(1)'
-        }
-        return tmpObj
-    },
-
-    number(row, key) {
-        const tmpObj = list.default(row, key)
-        const {format} = row
-        const formatList = {
-            float: '@float(1, 100, 2, 2)',
-            double: '@float(1, 100, 8, 8)'
-        }
-        tmpObj.mValue = formatList[format] || formatList.float
-        return tmpObj
-    },
-
-    string(row, key) {
-        const tmpObj = list.default(row, key)
-        tmpObj.mValue = '@string(10)'
-        return tmpObj
-    },
-
-    boolean(row, key) {
-        const tmpObj = list.default(row, key)
-        tmpObj.mValue = '@boolean' ? 1 : 0
-        return tmpObj
-    },
-
-    array(row, key) {
-        const tmpObj = list.default(row, key)
-        tmpObj.mValue = `${key}|10-20`
-        return tmpObj
-    },
-
-    default(row, key) {
-        defineDatabaseType(row, row.type)
-        const res = {
-            mKey: key,
-            mValue: row[key]
-        }
-        return res
+  integer(row, key) {
+    const tmpObj = list.default(row, key)
+    tmpObj.mValue = '@integer(1, 100)'
+    const descriptionData = analysisDescription(row.description)
+    if (isForeignKey(row)) {
+      tmpObj.mKey = `${key}|+1`
+      tmpObj.mValue = '@integer(1, 200)'
+      tmpObj.isForeignKey = true
+    } else if (descriptionData && row.format === 'int32') {
+      tmpObj.mValue = `@pick(${JSON.stringify(descriptionData)})`
     }
+    return tmpObj
+  },
+
+  number(row, key) {
+    const tmpObj = list.default(row, key)
+    const { format } = row
+    const formatList = {
+      float: '@float(1, 100, 2, 2)',
+      double: '@float(1, 100, 8, 8)'
+    }
+    tmpObj.mValue = formatList[format] || formatList.float
+    return tmpObj
+  },
+
+  string(row, key) {
+    const tmpObj = list.default(row, key)
+    if (includesWords(key, 'time')) {
+      tmpObj.mValue = '@datetime'
+    } else if (includesWords(key, 'date')) {
+      tmpObj.mValue = '@date'
+    } else if (includesWords(key, ['path', 'url'])) {
+      tmpObj.mValue = '@image'
+    } else if (includesWords(key, 'color')) {
+      tmpObj.mValue = '@color'
+    } else if (includesWords(key, 'email')) {
+      tmpObj.mValue = '@email'
+    } else if (includesWords(key, 'name')) {
+      tmpObj.mValue = '@name'
+    } else {
+      tmpObj.mValue = '@string(10)'
+    }
+    return tmpObj
+  },
+
+  boolean(row, key) {
+    const tmpObj = list.default(row, key)
+    tmpObj.mValue = '@boolean' ? 1 : 0
+    return tmpObj
+  },
+
+  array(row, key) {
+    const tmpObj = list.default(row, key)
+    tmpObj.mValue = `${key}|10-20`
+    return tmpObj
+  },
+
+  default(row, key) {
+    defineDatabaseType(row, row.type)
+    const res = {
+      key,
+      mKey: key,
+      mValue: row[key]
+    }
+    return res
+  }
 }
 
 function formatVal(row, key) {
-    const {type} = row
-    const fn = list[type] || list.default
-    return merge(row, fn(row, key))
+  const { type } = row
+  row.key = key
+  const fn = list[type] || list.default
+  return merge(row, fn(row, key))
 }
 
-export function defineDatabaseType(obj, value) {
-    return Object.defineProperty(obj, '__databaseType__', {
-        value,
-        writable: true,
-        configurable: false
+function splitWords(str) {
+  if (!str) return []
+  return str.split(/(?=[A-Z])/).map(toLower)
+}
+
+function includesWords(str, words) {
+  if (!isArray(words)) words = [words]
+  const words1 = splitWords(str)
+  return words1.some(item => {
+    return words.find(sItem => sItem == item)
+  })
+}
+
+function analysisDescription(val, type = 'number') {
+  const list = {
+    number() {
+      if (!val) return null
+      return val.match(/\d+/g)
+    }
+  }
+  return list[type]() || list.number()
+}
+
+export function defineDatabaseType(obj, value, prop = '__databaseType__') {
+  return Object.defineProperty(obj, prop, {
+    value,
+    writable: true,
+    configurable: true,
+    enumerable: false
+  })
+}
+
+export function getMockjsSyntax(data, keyList, parentPath = '') {
+  if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array') {
+    let option = {}
+    const keys = Object.keys(data)
+    for (let key of keys) {
+      const val = data[key]
+      let prop = val.mKey || key
+      try {
+        if (val.mValue.indexOf('@/') >= 0) {
+          prop = key
+        }
+      } catch {
+      }
+      const curParentPath = parentPath ? `${parentPath}.${key}` : key
+      if (val.__databaseType__ === 'array') {
+        const suffix = val.arrayCount || '1-10'
+        prop = `${prop}|${suffix}`
+        option[prop] = [getMockjsSyntax(val, keyList, curParentPath)]
+      } else {
+        option[prop] = getMockjsSyntax(val, keyList, curParentPath)
+      }
+    }
+    return option
+  }
+  if (data.isForeignKey && !data.mValue.startsWith('@')) {
+    keyList.push({
+      from: data.mValue,
+      to: parentPath
     })
+  }
+  return data.mValue
+}
+
+export function createForeignKeyList(data, parentPath = '') {
+  const tmpArr = []
+  if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array') {
+    const keys = Object.keys(data)
+    for (let key of keys) {
+      const val = data[key]
+      const curParentPath = `${parentPath}${key}.`
+      tmpArr.push(...createForeignKeyList(val, curParentPath))
+    }
+  } else {
+    if (isForeignKey(data)) {
+      let label = `${parentPath}`
+      label = label.slice(0, -1)
+      tmpArr.push({
+        label,
+        value: label
+      })
+    }
+  }
+  return tmpArr
+}
+
+export function fillForeignKeyList(data, keyList) {
+  keyList.map(({ from, to }) => {
+    const {data: fromData, lastProp: fromLastProp} = getDataByProp(from)
+    const {data: toData, lastProp: toLastProp} = getDataByProp(to)
+    if(validatenull(fromData) || validatenull(toData)) return
+    toData.map((toItem, index) => {
+      try {
+        let fromItem = fromData[index]
+        if(fromData.length == 1) {
+          fromItem = fromData[0]
+        }
+        toItem[toLastProp] = fromItem[fromLastProp]
+      } catch (err) {
+        toItem[toLastProp] = err.toString()
+      }
+    })
+    // fromData.map((item, index) => {
+    //   const toItem = toData[index]
+    //   toItem[toLastProp] = item[fromLastProp]
+    // })
+  })
+
+  function getDataByProp(prop) {
+    const splitProps = prop.split('.')
+    const lastProp = splitProps.pop()
+    const flatData = flatMapDeepByArray(data, splitProps)
+    return {
+      data: flatData,
+      lastProp,
+    }
+  }
+}
+
+function isForeignKey(data) {
+  try {
+    return data.description && data.description.indexOf('主键') >= 0 || includesWords(data.key, 'id')
+  } catch {
+    return false
+  }
+}
+
+const foreignKeyList = []
+
+export function createFormColumns(data, prop) {
+  let option = null
+  if (!prop) {
+    foreignKeyList.length = 0
+    foreignKeyList.push({
+      label: '@integer(1, 200)',
+      value: '@integer(1, 200)'
+    })
+    foreignKeyList.push(...createForeignKeyList(data))
+  }
+  if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array') {
+    option = {
+      prop,
+      label: prop,
+      span: 24,
+      labelWidth: 'auto',
+      slot: 'form',
+      column: [],
+      databaseType: data.__databaseType__
+    }
+    const keys = Object.keys(data)
+    for (let key of keys) {
+      const val = data[key]
+      option.column.push(createFormColumns(val, key))
+    }
+  } else if (data.__databaseType__ === 'array') {
+    return createFormColumns(data, prop)
+  } else {
+    option = {
+      prop,
+      span: 6,
+      label: data.mKey
+    }
+    if (data.__databaseType__ === 'string') {
+      option.type = 'select'
+      option.filterable = true
+      option.dicData = dicOfString
+    }
+    if (isForeignKey(data) && data.__databaseType__ === 'integer') {
+      option.type = 'select'
+      option.filterable = true
+      option.dicData = foreignKeyList
+    }
+  }
+  return option
 }

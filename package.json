@@ -114,6 +114,7 @@
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-vue": "^7.9.0",
     "eslint-plugin-vuefix": "^0.2.1",
+    "mockjs": "^1.1.0",
     "sass": "1.32.6",
     "sass-loader": "^10.1.1",
     "svg-sprite-loader": "^5.2.1",

@@ -1,10 +1,38 @@
-export const dicOfString= [
-    {
-        label: 'url',
-        value: 'url'
-    },
-    {
-        label: 'path',
-        value: 'path'
-    }
+export const dicOfString = [
+  {
+    label: '@date',
+    value: '@date'
+  },
+  {
+    label: '@datetime',
+    value: '@datetime'
+  },
+  {
+    label: '@image',
+    value: '@image'
+  },
+  {
+    label: '@email',
+    value: '@email'
+  },
+  {
+    label: '@color',
+    value: '@color'
+  },
+  {
+    label: '@email',
+    value: '@email'
+  },
+  {
+    label: '@url',
+    value: '@url'
+  },
+  {
+    label: '@name',
+    value: '@name'
+  },
+  {
+    label: '@string(10)',
+    value: '@string(10)'
+  }
 ]

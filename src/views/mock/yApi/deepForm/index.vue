@@ -1,32 +1,36 @@
 <template>
   <baseForm
-      class="base-form-container"
-      :option="option"
-      v-model="form"
-      v-bind="$attrs"
-      v-on="$listeners"
+    class="base-form-container"
+    :option="option"
+    v-model="form"
+    v-bind="$attrs"
+    v-on="$listeners"
   >
-    <template v-for="item in option.column" #[`${item.prop}`]="row">
-      <deepForm
-          v-if="item.slot === 'form'"
+    <template v-for="item in option.column" #[`${item.prop}`]="{form: row}">
+      <div v-if="item.slot === 'form'">
+        <avue-crud-input class="mb15" v-model="form[item.prop].arrayCount"
+                         v-if="item.databaseType === 'array'"></avue-crud-input>
+        <deepForm
           :form="form[item.prop]"
           :option="item"
           v-bind="$attrs"
           v-on="$listeners"/>
+      </div>
+
       <component
-          v-else
-          v-model="form[item.prop].mValue"
-          :dic="item.dicData"
-          :is="contentComponent(item)"
-          v-bind="item"
+        v-else
+        v-model="form[item.prop].mValue"
+        :dic="item.dicData"
+        :is="contentComponent(item)"
+        v-bind="item"
       />
     </template>
   </baseForm>
 </template>
 
 <script>
-import {getComponent} from "@/components/avue/utils/util";
-import {upperFirst} from 'lodash'
+import { getComponent } from '@/components/avue/utils/util';
+import { upperFirst } from 'lodash'
 
 export default {
   name: 'deepForm',
@@ -46,7 +50,7 @@ export default {
       return (column) => {
         return this.getComponent(column.type)
       }
-    },
+    }
   },
 
   methods: {
