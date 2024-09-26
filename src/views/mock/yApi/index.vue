@@ -3,15 +3,13 @@
     <el-button class="mb20" @click="createMockData">
       生成模拟数据
     </el-button>
+    <avue-crud-input class="mb20" v-model="mockDescribeJson" type="textarea"></avue-crud-input>
     <deepForm :form="form" :option="optionList"/>
   </div>
 </template>
 <script>
 import deepForm from './deepForm'
-import mockData from './mockData'
-import { cloneDeep } from 'lodash'
 import {
-  createForeignKeyList,
   createFormByDeepMapData,
   createFormColumns,
   fillForeignKeyList,
@@ -27,21 +25,31 @@ export default {
   data() {
     return {
       form: {},
+      mockDescribeJson: '{}',
       optionList: {}
     }
   },
 
-  created() {
-    this.form = createFormByDeepMapData(cloneDeep(mockData))
-    console.log('form', this.form)
-    const res = this.optionList = createFormColumns(this.form)
-    console.log('res', res)
+  computed: {
+    mockDescribeData({ mockDescribeJson }) {
+      return JSON.parse(mockDescribeJson)
+    }
+  },
+
+  watch: {
+    mockDescribeJson() {
+      this.init()
+    }
   },
 
   methods: {
+    init() {
+      debugger
+      this.form = createFormByDeepMapData(this.mockDescribeData)
+      this.optionList = createFormColumns(this.form)
+    },
+
     createMockData() {
-     // const res = createForeignKeyList(this.form)
-     //  console.log('res', res)
       const foreignKeyList = []
       const syntaxRes = getMockjsSyntax(this.form, foreignKeyList)
       console.log('syntaxRes', syntaxRes)
