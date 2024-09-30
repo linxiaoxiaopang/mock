@@ -22,13 +22,22 @@ const CONFIG = {
               '^/baidu': '' //请求的时候使用这个/baidu 就可以
             }
           },
+          '/api': {
+            target: 'http://192.168.10.198:3000'
+          },
           '/': {
             target: process.env.VUE_APP_BASE_URL,
             changeOrigin: true
           }
         }
       }
-      : {}
+      : {
+        proxy: {
+          '/api': {
+            target: 'http://192.168.10.198:3000'
+          }
+        }
+      }
 }
 
 /* eslint-enable */
