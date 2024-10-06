@@ -1,7 +1,8 @@
 import { merge, isArray, toLower } from 'lodash'
 import { dicOfString } from '@/views/mock/yApi/const'
-import { validatenull } from '@/components/avue/utils/validate';
-import { flatMapDeepByArray } from '@/utils';
+import { validatenull } from '@/components/avue/utils/validate'
+import { flatMapDeepByArray } from '@/utils'
+import '../extend/index'
 
 const DEFAULT_ARRAY_COUNT = '1-10'
 
@@ -72,7 +73,7 @@ const list = {
     } else if (includesWords(key, 'date')) {
       tmpObj.mValue = '@date'
     } else if (includesWords(key, ['path', 'url'])) {
-      tmpObj.mValue = '@image'
+      tmpObj.mValue = '@ossImage'
     } else if (includesWords(key, 'color')) {
       tmpObj.mValue = '@color'
     } else if (includesWords(key, 'email')) {

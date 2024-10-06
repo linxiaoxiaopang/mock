@@ -9,7 +9,7 @@ export const dicOfString = [
   },
   {
     label: '@image',
-    value: '@image'
+    value: '@ossImage'
   },
   {
     label: '@email',
