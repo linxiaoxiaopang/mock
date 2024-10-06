@@ -20,7 +20,7 @@ import { formatDate } from 'element-ui/src/utils/date-util'
 import {
   createFormByDeepMapData,
   createFormColumns,
-  fillForeignKeyList,
+  fillForeignKeyList, formatMockData,
   getMockjsSyntax
 } from './utils'
 import axios from 'axios'
@@ -71,7 +71,9 @@ export default {
       console.log('syntaxRes', syntaxRes)
       console.log('foreignKeyList', foreignKeyList)
       const mockRes = Mock.mock(syntaxRes)
+      formatMockData(mockRes)
       fillForeignKeyList(mockRes, foreignKeyList)
+      console.log('mockRes', mockRes)
       const fileName = `yApi_${this.id}-${formatDate(Date.now(), 'yyyyMMdd')}.json`
       this.downloadJSON(mockRes, fileName)
     },
@@ -141,7 +143,7 @@ export default {
         url: '/api/user/login',
         data: {
           email: '541953126@qq.com',
-          password: 'Lin520..'
+          password: 'Test123456'
         }
       })
       return this.handleAxiosData(res)

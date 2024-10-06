@@ -1,4 +1,4 @@
-import { merge, isArray, toLower } from 'lodash'
+import { merge, isArray, toLower, forEach, isObject, every, uniq } from 'lodash'
 import { dicOfString } from '@/views/mock/yApi/const'
 import { validatenull } from '@/components/avue/utils/validate'
 import { flatMapDeepByArray } from '@/utils'
@@ -26,9 +26,8 @@ export function createFormByDeepMapData(data, prop) {
     if (!data.items.properties) {
       defineDatabaseType(res, true, 'notObjectArray')
       data.items.description = data.description
-    } else {
-      defineDatabaseType(res, DEFAULT_ARRAY_COUNT, 'arrayCount')
     }
+    defineDatabaseType(res, DEFAULT_ARRAY_COUNT, 'arrayCount')
     tmp = res
   } else {
     tmp = formatVal(data, prop)
@@ -47,9 +46,6 @@ const list = {
       tmpObj.isForeignKey = true
     } else if (descriptionData && row.format === 'int32') {
       let argStr = JSON.stringify(descriptionData)
-      if (row.notObjectItem) {
-        argStr += `,1,${descriptionData.length}`
-      }
       tmpObj.mValue = `@pick(${argStr})`
     }
     return tmpObj
@@ -162,7 +158,7 @@ export function getMockjsSyntax(data, keyList, parentPath = '') {
       } catch {
       }
       const curParentPath = parentPath ? `${parentPath}.${key}` : key
-      if (val.__databaseType__ === 'array' && !val.notObjectArray) {
+      if (val.__databaseType__ === 'array') {
         const suffix = val.arrayCount || '1-10'
         prop = `${prop}|${suffix}`
         option[prop] = [getMockjsSyntax(val, keyList, curParentPath)]
@@ -301,4 +297,45 @@ export function createFormColumns(data, prop) {
     }
   }
   return option
+}
+
+export function formatMockData(data) {
+  deepTraverse(data, (item, key, value) => {
+    uniqPrimitiveArray(value)
+  })
+
+  function uniqPrimitiveArray(value) {
+    if (!isPrimitiveArray(value)) return
+    const uniqVal = uniq(value)
+    value.length = 0
+    value.push(...uniqVal)
+  }
+
+  function isPrimitiveArray(value) {
+    if (!isArray(value)) return false
+    return every(value, isPrimitive)
+  }
+}
+
+export function deepTraverse(value, callback) {
+  if (isArray(value)) {
+    // 遍历数组中的每个元素
+    forEach(value, (item, index) => {
+      callback(item, index, value); // 调用回调函数
+      deepTraverse(item, callback); // 递归遍历子项
+    })
+  } else if (isObject(value)) {
+    // 遍历对象中的每个键值对
+    forEach(value, (item, key) => {
+      callback(item, key, value) // 调用回调函数
+      deepTraverse(item, callback) // 递归遍历子项
+    })
+  } else {
+    // 对基础类型的值调用回调函数
+    callback(value)
+  }
+}
+
+function isPrimitive(value) {
+  return value === null || (typeof value !== 'object' && typeof value !== 'function');
 }
