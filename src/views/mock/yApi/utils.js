@@ -16,9 +16,18 @@ export function createFormByDeepMapData(data, prop) {
     }
     defineDatabaseType(tmp, 'object')
   } else if (data.type === 'array') {
+    if (!data.items.properties) {
+      data.items.description = data.description
+      data.items.notObjectItem = true
+    }
     const res = createFormByDeepMapData(data.items, prop)
     defineDatabaseType(res, 'array')
-    defineDatabaseType(res, DEFAULT_ARRAY_COUNT, 'arrayCount')
+    if (!data.items.properties) {
+      defineDatabaseType(res, true, 'notObjectArray')
+      data.items.description = data.description
+    } else {
+      defineDatabaseType(res, DEFAULT_ARRAY_COUNT, 'arrayCount')
+    }
     tmp = res
   } else {
     tmp = formatVal(data, prop)
@@ -36,7 +45,11 @@ const list = {
       tmpObj.mValue = '@integer(1, 200)'
       tmpObj.isForeignKey = true
     } else if (descriptionData && row.format === 'int32') {
-      tmpObj.mValue = `@pick(${JSON.stringify(descriptionData)})`
+      let argStr = JSON.stringify(descriptionData)
+      if (row.notObjectItem) {
+        argStr += `,1,${descriptionData.length}`
+      }
+      tmpObj.mValue = `@pick(${argStr})`
     }
     return tmpObj
   },
@@ -135,7 +148,7 @@ export function defineDatabaseType(obj, value, prop = '__databaseType__') {
 }
 
 export function getMockjsSyntax(data, keyList, parentPath = '') {
-  if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array') {
+  if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array' && !data.notObjectArray) {
     let option = {}
     const keys = Object.keys(data)
     for (let key of keys) {
@@ -148,7 +161,7 @@ export function getMockjsSyntax(data, keyList, parentPath = '') {
       } catch {
       }
       const curParentPath = parentPath ? `${parentPath}.${key}` : key
-      if (val.__databaseType__ === 'array') {
+      if (val.__databaseType__ === 'array' && !val.notObjectArray) {
         const suffix = val.arrayCount || '1-10'
         prop = `${prop}|${suffix}`
         option[prop] = [getMockjsSyntax(val, keyList, curParentPath)]
@@ -191,13 +204,13 @@ export function createForeignKeyList(data, parentPath = '') {
 
 export function fillForeignKeyList(data, keyList) {
   keyList.map(({ from, to }) => {
-    const {data: fromData, lastProp: fromLastProp} = getDataByProp(from)
-    const {data: toData, lastProp: toLastProp} = getDataByProp(to)
-    if(validatenull(fromData) || validatenull(toData)) return
+    const { data: fromData, lastProp: fromLastProp } = getDataByProp(from)
+    const { data: toData, lastProp: toLastProp } = getDataByProp(to)
+    if (validatenull(fromData) || validatenull(toData)) return
     toData.map((toItem, index) => {
       try {
         let fromItem = fromData[index]
-        if(fromData.length == 1) {
+        if (fromData.length == 1) {
           fromItem = fromData[0]
         }
         toItem[toLastProp] = fromItem[fromLastProp]
@@ -217,7 +230,7 @@ export function fillForeignKeyList(data, keyList) {
     const flatData = flatMapDeepByArray(data, splitProps)
     return {
       data: flatData,
-      lastProp,
+      lastProp
     }
   }
 }
@@ -243,19 +256,29 @@ export function createFormColumns(data, prop) {
     foreignKeyList.push(...createForeignKeyList(data))
   }
   if (data.__databaseType__ === 'object' || data.__databaseType__ === 'array') {
-    option = {
-      prop,
-      label: prop,
-      span: 24,
-      labelWidth: 'auto',
-      slot: 'form',
-      column: [],
-      databaseType: data.__databaseType__
-    }
-    const keys = Object.keys(data)
-    for (let key of keys) {
-      const val = data[key]
-      option.column.push(createFormColumns(val, key))
+    if (data.notObjectArray) {
+      option = {
+        prop,
+        span: 6,
+        slot: 'notObjectArray',
+        label: data.mKey,
+        databaseType: data.__databaseType__
+      }
+    } else {
+      option = {
+        prop,
+        label: prop,
+        span: 24,
+        labelWidth: 'auto',
+        slot: 'form',
+        column: [],
+        databaseType: data.__databaseType__
+      }
+      const keys = Object.keys(data)
+      for (let key of keys) {
+        const val = data[key]
+        option.column.push(createFormColumns(val, key))
+      }
     }
   } else if (data.__databaseType__ === 'array') {
     return createFormColumns(data, prop)

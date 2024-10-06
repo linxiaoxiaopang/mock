@@ -36,7 +36,7 @@ export default {
   data() {
     return {
       form: {},
-      url: 'http://192.168.10.198:3000/project/41/interface/api/50484',
+      url: 'http://192.168.10.198:3000/project/41/interface/api/10483',
       mockDescribeJson: '{}',
       optionList: {}
     }

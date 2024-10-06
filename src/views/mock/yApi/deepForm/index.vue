@@ -17,6 +17,9 @@
           v-on="$listeners"/>
       </div>
 
+      <div v-else-if="item.slot === 'notObjectArray'">
+        <avue-crud-input class="mb15" v-model="form[item.prop].mValue"></avue-crud-input>
+      </div>
       <component
         v-else
         v-model="form[item.prop].mValue"
