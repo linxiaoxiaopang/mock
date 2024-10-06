@@ -7,11 +7,12 @@ import cloneDeep from 'lodash/cloneDeep'
 //展示路由列表
 export const ROUTER_MAP_LIST = [
   {
-    title: '渠道价格',
+    title: 'mock',
     children: [
       {
-        title: '渠道价格对比',
-        matchRouteList: ['/channelPriceComparison']
+        title: 'mock',
+        matchRouteList: [
+          '/mock']
       }
     ]
   }
